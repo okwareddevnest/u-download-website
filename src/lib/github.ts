@@ -114,3 +114,10 @@ export async function loadContributors(): Promise<GHContributor[]> {
   return first ? [first, ...rest] : rest
 }
 
+export async function getRepoInfo(): Promise<{ owner: string; repo: string; url: string } | null> {
+  const cfg = await loadPublicConfig()
+  const repoFull = cfg?.githubRepo || (import.meta as any).env?.VITE_GITHUB_REPO
+  const p = parseRepo(repoFull)
+  if (!p) return null
+  return { owner: p.owner, repo: p.repo, url: `https://github.com/${p.owner}/${p.repo}` }
+}

@@ -54,5 +54,15 @@ body {
 .btn-primary { @apply inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900; }
 
 .container-app {
-  @apply mx-auto max-w-6xl px-4 sm:px-6 lg:px-8;
+  @apply w-full;
+  padding-left: 1in;
+  padding-right: 2in;
+}
+
+/* Override for small screens to keep content accessible */
+@media (max-width: 768px) {
+  .container-app {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
