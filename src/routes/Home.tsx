@@ -14,7 +14,7 @@ export default function Home() {
               <LatestBadge />
               <h1 className="mb-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">U-Download</h1>
               <p className="mb-4 sm:mb-6 text-base sm:text-lg text-white/90">
-                Fast & Beautiful YouTube Downloader for Windows, macOS, and Linux. Paste a link, pick quality, and save.
+                Fast & Beautiful YouTube Downloader for Windows, macOS, and Linux. Paste a link, trim the exact segment you need, pick the best quality, and save.
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 <NavLink to="/download" className="btn-primary w-full sm:w-auto text-center">
@@ -49,16 +49,18 @@ export default function Home() {
             body: 'Paste a URL, choose quality, and save to your folder.',
           },
           {
-            title: 'Smart formats',
-            body: 'MP4, MP3 and more — tuned per platform and device.',
+            title: 'Trim & clip',
+            body: 'Select start and end times to download only the part you need.',
+          },
+          {
+            title: 'Quality‑aware downloads',
+            body: 'Automatically picks the best available resolution (4K/1080p/720p) with sensible file sizes.',
           },
           { title: 'Privacy friendly', body: 'No accounts or tracking on the download URLs.' },
-          { title: 'Dark mode', body: 'Beautiful in light and dark with a single toggle.' },
           {
             title: 'Cross‑platform',
             body: 'Windows, macOS (Intel/Apple Silicon) and Linux AppImage/Deb/RPM.',
-          },
-          { title: 'Open data manifest', body: 'Simple JSON file powers versions and assets.' },
+          }
         ].map((f) => (
           <div key={f.title} className="rounded-xl border border-slate-800 p-4 sm:p-5 shadow-sm bg-slate-900/50">
             <div className="mb-1 text-base sm:text-lg font-semibold text-white">{f.title}</div>
