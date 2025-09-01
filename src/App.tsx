@@ -5,6 +5,7 @@ import Download from './routes/Download'
 import Releases from './routes/Releases'
 import Terms from './routes/Terms'
 import Privacy from './routes/Privacy'
+import Contributors from './routes/Contributors'
 import { Logo } from './components/Logo'
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
             <nav className="flex items-center gap-6 text-sm font-medium">
               <NavLink className={({isActive})=>isActive? 'text-indigo-600 font-semibold' : 'text-slate-300 hover:text-indigo-400 font-medium'} to="/download">Download</NavLink>
               <NavLink className={({isActive})=>isActive? 'text-indigo-600 font-semibold' : 'text-slate-300 hover:text-indigo-400 font-medium'} to="/releases">Releases</NavLink>
+              <NavLink className={({isActive})=>isActive? 'text-indigo-600 font-semibold' : 'text-slate-300 hover:text-indigo-400 font-medium'} to="/contributors">Contributors</NavLink>
             </nav>
           </div>
         </header>
@@ -28,6 +30,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/download" element={<Download />} />
             <Route path="/releases" element={<Releases />} />
+            <Route path="/contributors" element={<Contributors />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
           </Routes>
