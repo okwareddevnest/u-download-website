@@ -3,6 +3,8 @@ import { detectPlatform } from '../lib/os'
 import { loadReleases, pickBestAsset, formatAssetType, type Asset, type OS } from '../lib/releases'
 import { OSIcon } from '../components/OSIcon'
 import { incrementDownloads, getTotalDownloads } from '../lib/analytics'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 type State = {
   loading: boolean
@@ -128,7 +130,9 @@ export default function Download() {
               {state.latestNotes && (
                 <details className="mt-6 rounded-lg border border-slate-800 p-4">
                   <summary className="cursor-pointer select-none text-sm font-bold text-slate-100">Release notes</summary>
-                  <pre className="mt-3 whitespace-pre-wrap text-sm text-slate-300">{state.latestNotes}</pre>
+                  <article className="prose prose-invert max-w-none text-slate-300 prose-a:text-indigo-400 prose-code:text-slate-200 mt-3">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.latestNotes}</ReactMarkdown>
+                  </article>
                 </details>
               )}
             </div>

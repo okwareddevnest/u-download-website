@@ -1,5 +1,7 @@
 import React from 'react'
 import { loadReleases, type Release } from '../lib/releases'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 export default function Releases() {
   const [releases, setReleases] = React.useState<Release[]>([])
@@ -27,7 +29,9 @@ export default function Releases() {
             <div className="mb-1 text-sm text-slate-400">{new Date(r.date).toDateString()}</div>
             <div className="mb-3 text-xl font-semibold text-slate-100">v{r.version}</div>
             {r.notes ? (
-              <pre className="whitespace-pre-wrap text-sm text-slate-300">{r.notes}</pre>
+              <article className="prose prose-invert max-w-none text-slate-300 prose-a:text-indigo-400 prose-code:text-slate-200">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.notes}</ReactMarkdown>
+              </article>
             ) : (
               <div className="text-slate-300">No notes provided.</div>
             )}

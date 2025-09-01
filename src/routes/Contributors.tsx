@@ -76,7 +76,7 @@ export default function Contributors() {
             </div>
           </div>
           <aside>
-            <div className="sticky top-24 rounded-xl border border-slate-800 p-6">
+            <div className="contrib-card rounded-xl border border-slate-800 p-6">
               <h2 className="mb-2 text-xl font-semibold text-slate-100">How to Contribute</h2>
               <p className="mb-4 text-sm text-slate-400">Help improve U-Download — follow these quick steps.</p>
               <ol className="mb-4 list-decimal space-y-2 pl-5 text-sm text-slate-300">
