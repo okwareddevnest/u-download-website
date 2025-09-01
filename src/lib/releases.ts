@@ -24,7 +24,11 @@ export type ReleasesFile = {
   releases: Release[]
 }
 
-type PublicConfig = { githubRepo?: string }
+type PublicConfig = {
+  githubRepo?: string
+  includePrereleases?: boolean
+  maxReleases?: number
+}
 
 async function loadConfig(): Promise<PublicConfig | null> {
   try {
@@ -86,14 +90,68 @@ async function fetchLatestFromGitHub(repoFull: string, token?: string): Promise<
   }
 }
 
+async function fetchAllFromGitHub(
+  repoFull: string,
+  token: string | undefined,
+  opts: { includePrereleases?: boolean; maxReleases?: number } = {},
+): Promise<ReleasesFile | null> {
+  try {
+    const headers: Record<string, string> = { Accept: 'application/vnd.github+json' }
+    if (token) headers.Authorization = `Bearer ${token}`
+    const perPage = Math.max(1, Math.min(100, opts.maxReleases ?? 20))
+    const r = await fetch(`https://api.github.com/repos/${repoFull}/releases?per_page=${perPage}`, { headers })
+    if (!r.ok) return null
+    const arr = (await r.json()) as any[]
+    const filtered = arr.filter((it) => !it.draft && (opts.includePrereleases ? true : !it.prerelease))
+    const releases: Release[] = filtered
+      .map((json) => {
+        const version: string = json.tag_name?.replace(/^v/i, '') || json.name || 'latest'
+        const date: string = json.published_at || json.created_at || new Date().toISOString()
+        const notes: string | undefined = json.body || undefined
+        const assets: Asset[] = (json.assets as any[])
+          .map((a) => {
+            const meta = inferOSAndKindFromFilename(a.name)
+            if (!meta) return null
+            return {
+              os: meta.os,
+              kind: meta.kind,
+              arch: meta.arch,
+              filename: a.name,
+              url: a.browser_download_url,
+              sizeBytes: a.size,
+            } as Asset
+          })
+          .filter(Boolean) as Asset[]
+        return { version, date, notes, assets }
+      })
+      // Drop releases with no recognized assets so the Download page remains meaningful
+      .filter((r) => r.assets && r.assets.length > 0)
+      // Sort newest first by date
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+    if (!releases.length) return null
+    const latest = releases[0]
+    return { latest: latest.version, releases }
+  } catch {
+    return null
+  }
+}
+
 export async function loadReleases(): Promise<ReleasesFile> {
   // Try GitHub first if configured
   const cfg = await loadConfig()
   const repo = cfg?.githubRepo || import.meta.env.VITE_GITHUB_REPO
   const ghToken = import.meta.env.VITE_GITHUB_TOKEN as string | undefined
   if (repo) {
-    const gh = await fetchLatestFromGitHub(repo, ghToken)
-    if (gh) return gh
+    // Prefer multi-release fetch for /releases page awareness
+    const ghAll = await fetchAllFromGitHub(repo, ghToken, {
+      includePrereleases: cfg?.includePrereleases,
+      maxReleases: cfg?.maxReleases,
+    })
+    if (ghAll) return ghAll
+    // Fallback to latest-only if list API fails
+    const ghLatest = await fetchLatestFromGitHub(repo, ghToken)
+    if (ghLatest) return ghLatest
   }
   // Fallback to static manifest
   const res = await fetch('/data/releases.json', { cache: 'no-cache' })

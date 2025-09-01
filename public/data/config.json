@@ -1,4 +1,5 @@
 {
-  "githubRepo": "okwareddevnest/U-Download"
+  "githubRepo": "okwareddevnest/U-Download",
+  "includePrereleases": false,
+  "maxReleases": 20
 }
-
