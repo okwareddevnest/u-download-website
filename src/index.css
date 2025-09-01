@@ -1,0 +1,58 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
+
+/* Dark theme only tokens */
+:root {
+  --bg: 2 6 23; /* slate-950 */
+  --fg: 226 232 240; /* slate-200 */
+  --muted: 148 163 184; /* slate-400 */
+  --brand: 124 58 237; /* brand-600 */
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-[rgb(var(--bg))] text-[rgb(var(--fg))] antialiased;
+}
+
+/* 3D Marquee background animations */
+@keyframes marquee-vertical {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-100px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes marquee-vertical-mobile {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-50px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical 8s ease-in-out infinite;
+}
+
+/* 3D transforms */
+.transform-3d {
+  transform-style: preserve-3d;
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .animate-marquee-vertical {
+    animation: marquee-vertical-mobile 6s ease-in-out infinite;
+  }
+  
+  .container-app {
+    @apply px-3;
+  }
+}
+
+.btn-primary { @apply inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-900; }
+
+.container-app {
+  @apply mx-auto max-w-6xl px-4 sm:px-6 lg:px-8;
+}

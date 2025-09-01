@@ -1,0 +1,10 @@
+{
+  "name": "U-Download",
+  "short_name": "U-Download",
+  "icons": [
+    { "src": "/favicon.png", "sizes": "64x64 128x128 256x256 512x512", "type": "image/png" }
+  ],
+  "theme_color": "#4f46e5",
+  "background_color": "#0f172a",
+  "display": "standalone"
+}
