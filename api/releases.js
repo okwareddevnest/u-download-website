@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   try {
-    const url = new URL(req.url, 'http://localhost')
+    const url = new URL(req.url || '/', 'http://localhost')
     const includePre = url.searchParams.get('includePrereleases') === '1'
     const max = Math.max(1, Math.min(100, Number(url.searchParams.get('max') || 20)))
 
@@ -8,8 +8,7 @@ export default async function handler(req, res) {
     const token = process.env.GITHUB_TOKEN
     const repo = normalizeRepo(repoEnv)
     if (!repo) {
-      res.statusCode = 400
-      res.json({ error: 'Missing GITHUB_REPO env' })
+      send(res, 400, { error: 'Missing GITHUB_REPO env' })
       return
     }
 
@@ -17,9 +16,7 @@ export default async function handler(req, res) {
     if (token) headers.Authorization = `Bearer ${token}`
     const r = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=${max}`, { headers })
     if (!r.ok) {
-      res.statusCode = r.status
-      res.setHeader('Cache-Control', 'no-store')
-      res.json({ error: 'GitHub fetch failed' })
+      send(res, r.status, { error: 'GitHub fetch failed' })
       return
     }
     const arr = await r.json()
@@ -49,19 +46,17 @@ export default async function handler(req, res) {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     if (!releases.length) {
-      res.statusCode = 204
       res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=86400')
-      res.end()
+      send(res, 200, { latest: '', releases: [] })
       return
     }
 
     const latest = releases[0].version
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400')
-    res.json({ latest, releases })
+    send(res, 200, { latest, releases })
   } catch (e) {
-    res.statusCode = 500
     res.setHeader('Cache-Control', 'no-store')
-    res.json({ error: 'Internal error' })
+    send(res, 200, { latest: '', releases: [] })
   }
 }
 
@@ -81,6 +76,12 @@ function normalizeRepo(input) {
   return `${owner}/${repo}`
 }
 
+function send(res, status, obj) {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json')
+  res.end(JSON.stringify(obj))
+}
+
 function inferOSAndKindFromFilename(filename) {
   const f = filename.toLowerCase()
   const arch = /arm64|aarch64/.test(f) ? 'arm64' : /x64|x86_64|amd64/.test(f) ? 'x64' : undefined
@@ -95,4 +96,3 @@ function inferOSAndKindFromFilename(filename) {
   if (f.endsWith('.zip')) return { os: 'mac', kind: 'zip', arch }
   return null
 }
-

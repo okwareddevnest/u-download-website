@@ -1,23 +1,19 @@
 export default async function handler(req, res) {
   try {
+    const url = new URL(req.url || '/', 'http://localhost')
+    const includeBots = url.searchParams.get('includeBots') === '1' || url.searchParams.get('includeBots') === 'true'
     const repoEnv = process.env.GITHUB_REPO || process.env.VITE_GITHUB_REPO
     const token = process.env.GITHUB_TOKEN
-    const includeBots = req.query && (req.query.includeBots === '1' || req.query.includeBots === 'true')
     const repo = normalizeRepo(repoEnv)
     if (!repo) {
-      res.statusCode = 400
-      res.json({ error: 'Missing GITHUB_REPO env' })
-      return
+      return send(res, 400, { error: 'Missing GITHUB_REPO env' })
     }
     const [owner, repoName] = repo.split('/')
     const headers = { Accept: 'application/vnd.github+json' }
     if (token) headers.Authorization = `Bearer ${token}`
     const r = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contributors?per_page=100`, { headers })
     if (!r.ok) {
-      res.statusCode = r.status
-      res.setHeader('Cache-Control', 'no-store')
-      res.json({ error: 'GitHub fetch failed' })
-      return
+      return send(res, r.status, { error: 'GitHub fetch failed' })
     }
     const arr = await r.json()
     const base = arr
@@ -41,11 +37,10 @@ export default async function handler(req, res) {
     }
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400')
-    res.json(list)
+    send(res, 200, list)
   } catch (e) {
-    res.statusCode = 500
     res.setHeader('Cache-Control', 'no-store')
-    res.json({ error: 'Internal error' })
+    send(res, 200, [])
   }
 }
 
@@ -65,3 +60,8 @@ function normalizeRepo(input) {
   return `${owner}/${repo}`
 }
 
+function send(res, status, obj) {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json')
+  res.end(JSON.stringify(obj))
+}
