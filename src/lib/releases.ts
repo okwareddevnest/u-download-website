@@ -40,6 +40,22 @@ async function loadConfig(): Promise<PublicConfig | null> {
   }
 }
 
+function normalizeRepo(input?: string): string | null {
+  if (!input) return null
+  const cleaned = input.trim().replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/$/, '')
+  const parts = cleaned.split('/')
+  const ghIdx = parts.indexOf('github.com')
+  if (ghIdx !== -1) {
+    const owner = parts[ghIdx + 1]
+    const repo = parts[ghIdx + 2]
+    if (owner && repo) return `${owner}/${repo}`
+    return null
+  }
+  const [owner, repo] = cleaned.split('/')
+  if (!owner || !repo) return null
+  return `${owner}/${repo}`
+}
+
 function inferOSAndKindFromFilename(filename: string): Pick<Asset, 'os' | 'kind' | 'arch'> | null {
   const f = filename.toLowerCase()
   const arch: Arch | undefined = /arm64|aarch64/.test(f) ? 'arm64' : /x64|x86_64|amd64/.test(f) ? 'x64' : undefined
@@ -140,8 +156,18 @@ async function fetchAllFromGitHub(
 export async function loadReleases(): Promise<ReleasesFile> {
   // Try GitHub first if configured
   const cfg = await loadConfig()
-  const repo = cfg?.githubRepo || import.meta.env.VITE_GITHUB_REPO
+  const repo = normalizeRepo(cfg?.githubRepo || import.meta.env.VITE_GITHUB_REPO)
   const ghToken = import.meta.env.VITE_GITHUB_TOKEN as string | undefined
+  // Prefer serverless API if available (avoids client-side rate limits)
+  try {
+    const api = await fetch(`/api/releases?includePrereleases=${cfg?.includePrereleases ? '1' : '0'}&max=${cfg?.maxReleases ?? 20}`,
+      { cache: 'no-cache' },
+    )
+    if (api.ok) {
+      const data = (await api.json()) as ReleasesFile
+      if (data && Array.isArray(data.releases)) return data
+    }
+  } catch {}
   if (repo) {
     // Prefer multi-release fetch for /releases page awareness
     const ghAll = await fetchAllFromGitHub(repo, ghToken, {
@@ -154,21 +180,23 @@ export async function loadReleases(): Promise<ReleasesFile> {
     if (ghLatest) return ghLatest
   }
   // Fallback to static manifest
-  const res = await fetch('/data/releases.json', { cache: 'no-cache' })
-  if (!res.ok) {
-    throw new Error('Failed to load releases manifest (missing /data/releases.json)')
-  }
-  const ct = res.headers.get('content-type') || ''
-  if (!ct.includes('application/json')) {
-    // SPA hosts may return index.html with 200; explain clearly
-    const text = await res.text()
-    if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<html')) {
-      throw new Error('Expected JSON at /data/releases.json but received HTML. Ensure the file exists in public/data/')
+  try {
+    const res = await fetch('/data/releases.json', { cache: 'no-cache' })
+    if (!res.ok) return { latest: '', releases: [] }
+    const ct = res.headers.get('content-type') || ''
+    if (!ct.includes('application/json')) {
+      // SPA hosts may return index.html with 200; treat as missing
+      const text = await res.text()
+      if (text.trim().startsWith('<!doctype') || text.trim().startsWith('<html')) {
+        return { latest: '', releases: [] }
+      }
+      return { latest: '', releases: [] }
     }
-    throw new Error('Invalid releases manifest content-type; expected JSON')
+    const data: ReleasesFile = await res.json()
+    return data
+  } catch {
+    return { latest: '', releases: [] }
   }
-  const data: ReleasesFile = await res.json()
-  return data
 }
 
 export function pickBestAsset(assets: Asset[], os: OS, arch: Arch | undefined): Asset | undefined {

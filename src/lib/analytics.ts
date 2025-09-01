@@ -7,6 +7,7 @@ function ns(host: string) {
 
 export async function getTotalDownloads(): Promise<number | null> {
   try {
+    if (import.meta.env.DEV || location.hostname === 'localhost') return null
     const host = location.host || 'local'
     const r = await fetch(`https://api.countapi.xyz/get/${ns(host)}/total-downloads`)
     const d = await r.json()
@@ -18,6 +19,7 @@ export async function getTotalDownloads(): Promise<number | null> {
 
 export async function incrementDownloads(delta = 1): Promise<number | null> {
   try {
+    if (import.meta.env.DEV || location.hostname === 'localhost') return null
     const host = location.host || 'local'
     const r = await fetch(
       `https://api.countapi.xyz/update/${ns(host)}/total-downloads/?amount=${delta}`,
@@ -29,4 +31,3 @@ export async function incrementDownloads(delta = 1): Promise<number | null> {
     return null
   }
 }
-

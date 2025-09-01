@@ -1,5 +1,6 @@
 import React from 'react'
 import { loadContributors, type GHContributor, getRepoInfo } from '../lib/github'
+import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card'
 
 export default function Contributors() {
   const [list, setList] = React.useState<GHContributor[]>([])
@@ -45,38 +46,45 @@ export default function Contributors() {
           <div className="lg:col-span-2">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {list.map((c) => (
-                <a
-                  key={c.login}
-                  href={c.htmlUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`flex items-center gap-3 rounded-xl border border-slate-800 p-4 hover:border-indigo-600/60 hover:bg-slate-900/40 ${
-                    c.isOwner ? 'ring-1 ring-indigo-600/40' : ''
-                  }`}
-                  title={c.isOwner ? 'Repository Owner' : undefined}
-                >
-                  <img
-                    src={c.avatarUrl}
-                    alt={`@${c.login}`}
-                    className="h-12 w-12 rounded-full border border-slate-700"
-                    loading="lazy"
-                  />
-                  <div className="min-w-0">
-                    <div className="truncate font-semibold text-slate-100">
-                      {c.name || c.login}
-                      {c.isOwner && (
-                        <span className="ml-2 rounded bg-indigo-600/20 px-2 py-0.5 text-xs text-indigo-300">Owner</span>
-                      )}
-                    </div>
-                    <div className="truncate text-sm text-slate-400">@{c.login}</div>
-                    <div className="text-xs text-slate-500">{c.contributions} contributions</div>
-                  </div>
-                </a>
+                <CardContainer key={c.login}>
+                  <a href={c.htmlUrl} target="_blank" rel="noreferrer">
+                    <CardBody
+                      className={`flex items-center gap-3 rounded-xl border border-slate-800 p-4 hover:border-indigo-600/60 hover:bg-slate-900/40 ${
+                        c.isOwner ? 'ring-1 ring-indigo-600/40' : ''
+                      }`}
+                      title={c.isOwner ? 'Repository Owner' : undefined}
+                    >
+                      <CardItem translateZ={60}>
+                        <img
+                          src={c.avatarUrl}
+                          alt={`@${c.login}`}
+                          className="h-12 w-12 rounded-full border border-slate-700"
+                          loading="lazy"
+                        />
+                      </CardItem>
+                      <div className="min-w-0">
+                        <CardItem translateZ={80} className="truncate font-semibold text-slate-100">
+                          {c.name || c.login}
+                          {c.isOwner && (
+                            <span className="ml-2 rounded bg-indigo-600/20 px-2 py-0.5 text-xs text-indigo-300">Owner</span>
+                          )}
+                        </CardItem>
+                        <CardItem translateZ={40} className="truncate text-sm text-slate-400">
+                          @{c.login}
+                        </CardItem>
+                        <CardItem translateZ={40} className="text-xs text-slate-500">
+                          {c.contributions} contributions
+                        </CardItem>
+                      </div>
+                    </CardBody>
+                  </a>
+                </CardContainer>
               ))}
             </div>
           </div>
           <aside>
-            <div className="contrib-card rounded-xl border border-slate-800 p-6">
+            <CardContainer>
+              <CardBody className="contrib-card rounded-xl border border-slate-800 p-6">
               <h2 className="mb-2 text-xl font-semibold text-slate-100">How to Contribute</h2>
               <p className="mb-4 text-sm text-slate-400">Help improve U-Download — follow these quick steps.</p>
               <ol className="mb-4 list-decimal space-y-2 pl-5 text-sm text-slate-300">
@@ -117,9 +125,9 @@ export default function Contributors() {
               <div className="flex flex-wrap gap-2">
                 {repo && (
                   <>
-                    <a className="btn-primary" href={`${repo.url}/fork`} target="_blank" rel="noreferrer">
+                    <CardItem translateZ={60} as="a" className="btn-primary" href={`${repo.url}/fork`} target="_blank" rel="noreferrer">
                       Fork on GitHub
-                    </a>
+                    </CardItem>
                     <a
                       className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
                       href={`${repo.url}/issues/new/choose`}
@@ -139,7 +147,8 @@ export default function Contributors() {
                   </>
                 )}
               </div>
-            </div>
+              </CardBody>
+            </CardContainer>
           </aside>
         </div>
       )}

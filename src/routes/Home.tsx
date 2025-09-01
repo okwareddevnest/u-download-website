@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import React from 'react'
 import { loadReleases } from '../lib/releases'
 import MarqueeBackground from '../components/MarqueeBackground'
+import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card'
 
 export default function Home() {
   return (
@@ -26,16 +27,20 @@ export default function Home() {
               </div>
             </div>
             <div className="flex-1 w-full mt-6 lg:mt-0">
-              <div className="relative mx-auto max-w-sm sm:max-w-md rounded-2xl border border-white/20 bg-white/10 p-2 sm:p-3 shadow-2xl backdrop-blur">
-                <img
-                  src="/images/product-image-1.png"
-                  alt="U-Download screenshot"
-                  className="rounded-lg"
-                  onError={(e) => {
-                    ;(e.currentTarget as HTMLImageElement).src = '/logo.svg'
-                  }}
-                />
-              </div>
+              <CardContainer>
+                <CardBody className="relative rounded-2xl border border-white/20 bg-white/10 p-2 sm:p-3 shadow-2xl backdrop-blur">
+                  <CardItem translateZ={60} className="w-full">
+                    <img
+                      src="/images/product-image-1.png"
+                      alt="U-Download screenshot"
+                      className="rounded-lg w-full"
+                      onError={(e) => {
+                        ;(e.currentTarget as HTMLImageElement).src = '/logo.svg'
+                      }}
+                    />
+                  </CardItem>
+                </CardBody>
+              </CardContainer>
             </div>
           </div>
         </div>
@@ -62,10 +67,16 @@ export default function Home() {
             body: 'Windows, macOS (Intel/Apple Silicon) and Linux AppImage/Deb/RPM.',
           }
         ].map((f) => (
-          <div key={f.title} className="rounded-xl border border-slate-800 p-4 sm:p-5 shadow-sm bg-slate-900/50">
-            <div className="mb-1 text-base sm:text-lg font-semibold text-white">{f.title}</div>
-            <div className="text-sm sm:text-base text-slate-300">{f.body}</div>
-          </div>
+          <CardContainer key={f.title}>
+            <CardBody className="rounded-xl border border-slate-800 p-4 sm:p-5 shadow-sm bg-slate-900/50">
+              <CardItem translateZ={50} className="mb-1 text-base sm:text-lg font-semibold text-white">
+                {f.title}
+              </CardItem>
+              <CardItem translateZ={80} as="p" className="text-sm sm:text-base text-slate-300">
+                {f.body}
+              </CardItem>
+            </CardBody>
+          </CardContainer>
         ))}
         </div>
       </section>
