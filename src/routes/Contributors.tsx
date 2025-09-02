@@ -63,14 +63,22 @@ export default function Contributors() {
                         />
                       </CardItem>
                       <div className="min-w-0">
-                        <CardItem translateZ={80} className="truncate font-semibold text-slate-100">
-                          {c.name || c.login}
-                          {c.isOwner && (
-                            <span className="ml-2 rounded bg-indigo-600/20 px-2 py-0.5 text-xs text-indigo-300">Owner</span>
-                          )}
-                        </CardItem>
-                        <CardItem translateZ={40} className="truncate text-sm text-slate-400">
-                          @{c.login}
+                        <CardItem translateZ={80} className="space-y-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="min-w-0 flex-1">
+                              {c.name ? (
+                                <>
+                                  <div className="truncate font-semibold text-slate-100">{c.name}</div>
+                                  <div className="truncate text-sm text-slate-400">@{c.login}</div>
+                                </>
+                              ) : (
+                                <div className="truncate font-semibold text-slate-100">@{c.login}</div>
+                              )}
+                            </div>
+                            {c.isOwner && (
+                              <span className="flex-shrink-0 rounded bg-indigo-600/20 px-2 py-0.5 text-xs text-indigo-300">Owner</span>
+                            )}
+                          </div>
                         </CardItem>
                         <CardItem translateZ={40} className="text-xs text-slate-500">
                           {c.contributions} contributions

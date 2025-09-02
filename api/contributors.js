@@ -36,6 +36,25 @@ export default async function handler(req, res) {
       list.unshift(own)
     }
 
+    // Enrich ALL contributors with complete user data for name and username display
+    await Promise.all(
+      list.map(async (c) => {
+        if (c.name) return // Skip if we already have the name
+        try {
+          const u = await fetch(`https://api.github.com/users/${c.login}`, { headers })
+          if (!u.ok) {
+            console.warn(`Failed to fetch user data for ${c.login}: ${u.status}`)
+            return
+          }
+          const j = await u.json()
+          // Always set name field - use the GitHub display name if available, otherwise keep undefined
+          c.name = j.name && j.name.trim() !== '' ? j.name.trim() : undefined
+        } catch (error) {
+          console.warn(`Error fetching user data for ${c.login}:`, error)
+        }
+      }),
+    )
+
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400')
     send(res, 200, list)
   } catch (e) {

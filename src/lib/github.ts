@@ -48,9 +48,13 @@ export async function loadContributors(): Promise<GHContributor[]> {
     const prox = await fetch('/api/contributors', { cache: 'no-cache' })
     if (prox.ok) {
       const data = (await prox.json()) as GHContributor[]
-      if (Array.isArray(data)) return data
+      if (Array.isArray(data)) {
+        return applyNameOverrides(data)
+      }
     }
-  } catch {}
+  } catch {
+    // Ignore serverless API errors and fall back to client-side implementation
+  }
   try {
     const cfg = await loadPublicConfig()
     const repoFull = cfg?.githubRepo || (import.meta as any).env?.VITE_GITHUB_REPO
@@ -110,18 +114,21 @@ export async function loadContributors(): Promise<GHContributor[]> {
       list.unshift(own)
     }
 
-    // Optionally enrich names for top N to reduce API calls
-    const top = list.slice(0, 20)
+    // Enrich ALL contributors with complete user data for name and username display
     await Promise.all(
-      top.map(async (c) => {
-        if (c.name) return
+      list.map(async (c) => {
+        if (c.name) return // Skip if we already have the name
         try {
           const u = await fetch(`https://api.github.com/users/${c.login}`, { headers })
-          if (!u.ok) return
+          if (!u.ok) {
+            console.warn(`Failed to fetch user data for ${c.login}: ${u.status}`)
+            return
+          }
           const j = await u.json()
-          c.name = j.name || undefined
-        } catch {
-          // ignore
+          // Always set name field - use the GitHub display name if available, otherwise keep undefined
+          c.name = j.name && j.name.trim() !== '' ? j.name.trim() : undefined
+        } catch (error) {
+          console.warn(`Error fetching user data for ${c.login}:`, error)
         }
       }),
     )
@@ -129,9 +136,34 @@ export async function loadContributors(): Promise<GHContributor[]> {
     // Keep owner first; sort rest by contributions desc
     const [first, ...rest] = list
     rest.sort((a, b) => b.contributions - a.contributions)
-    return first ? [first, ...rest] : rest
+    return applyNameOverrides(first ? [first, ...rest] : rest)
   } catch {
     return []
+  }
+}
+
+async function loadNameOverrides(): Promise<Record<string, string>> {
+  try {
+    const r = await fetch('/data/contributors.json', { cache: 'no-cache' })
+    if (!r.ok) return {}
+    const j = (await r.json()) as any
+    if (j && typeof j === 'object') {
+      if (j.displayNames && typeof j.displayNames === 'object') return j.displayNames as Record<string, string>
+      return j as Record<string, string>
+    }
+    return {}
+  } catch {
+    return {}
+  }
+}
+
+async function applyNameOverrides(list: GHContributor[]): Promise<GHContributor[]> {
+  try {
+    const map = await loadNameOverrides()
+    if (!map || Object.keys(map).length === 0) return list
+    return list.map((c) => ({ ...c, name: map[c.login] || c.name }))
+  } catch {
+    return list
   }
 }
 
