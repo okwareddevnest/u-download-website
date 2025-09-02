@@ -4,7 +4,6 @@ Overview
 - Static marketing + download site for U-Download.
 - Built with Vite (React + TS) and Tailwind CSS.
 - OS-aware download chooser with per-asset links.
-- Simple, privacy-friendly analytics for total downloads via CountAPI.
 
 Getting Started
 - Install: `npm i`
@@ -28,10 +27,8 @@ GitHub Releases (Dynamic)
 - Current setting: `okwareddevnest/U-Download`.
 - Optional: set an env var `VITE_GITHUB_REPO` or `VITE_GITHUB_TOKEN` to increase rate limits (token scoped to public repo read).
 
-Analytics (Total Downloads)
-- The site calls CountAPI to increment and read `total-downloads` scoped to your host name.
-- No personal data is collected; it’s a plain counter increment on click.
-- To reset or isolate counts per environment, use different hostnames.
+Analytics
+- No analytics are included. The previous total download counter has been removed.
 
 Notes on Artifacts
 - Files under `public/downloads/` in this repo are small stub binaries to keep the flow working. Replace them with your actual installers before deploying.
@@ -40,7 +37,8 @@ Notes on Artifacts
 Project Structure
 - `public/` – static assets (favicon, logo, releases.json, downloads/...).
 - `src/` – React app, routes and components.
-- `src/lib/` – OS detection, releases manifest loader, analytics.
+  
+Note: The total downloads analytics feature has been removed.
 
 Customization Tips
 - Colors: utility classes use the Indigo palette; adjust in `src/index.css` or replace with your brand hues.

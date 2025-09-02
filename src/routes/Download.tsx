@@ -2,7 +2,6 @@ import React from 'react'
 import { detectPlatform } from '../lib/os'
 import { loadReleases, pickBestAsset, formatAssetType, type Asset, type OS } from '../lib/releases'
 import { OSIcon } from '../components/OSIcon'
-import { incrementDownloads, getTotalDownloads } from '../lib/analytics'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -15,17 +14,15 @@ type State = {
   latestNotes?: string
   platform: OS
   selected?: Asset
-  totalDownloads: number | null
 }
 
 export default function Download() {
   const initialPlatform = React.useMemo(() => detectPlatform().platform, [])
-  const [state, setState] = React.useState<State>({
-    loading: true,
-    assets: [],
-    platform: initialPlatform,
-    totalDownloads: null,
-  })
+    const [state, setState] = React.useState<State>({
+      loading: true,
+      assets: [],
+      platform: initialPlatform,
+    })
 
   React.useEffect(() => {
     ;(async () => {
@@ -35,7 +32,6 @@ export default function Download() {
         const assets = latest?.assets || []
         const { arch } = detectPlatform()
         const recommended = pickBestAsset(assets, state.platform, arch)
-        const total = await getTotalDownloads()
         setState((s) => ({
           ...s,
           loading: false,
@@ -44,7 +40,6 @@ export default function Download() {
           latestNotes: latest?.notes,
           assets,
           selected: recommended,
-          totalDownloads: total ?? null,
         }))
       } catch (e: any) {
         setState((s) => ({ ...s, loading: false, error: e?.message || 'Failed to load releases' }))
@@ -61,27 +56,8 @@ export default function Download() {
   const download = async () => {
     if (!state.selected) return
     
-    try {
-      // Optimistically increment the UI counter immediately
-      setState((s) => ({ 
-        ...s, 
-        totalDownloads: s.totalDownloads !== null ? s.totalDownloads + 1 : 1 
-      }))
-      
-      // Update analytics in background
-      const newTotal = await incrementDownloads(1)
-      if (newTotal !== null) {
-        // Update with actual server value
-        setState((s) => ({ ...s, totalDownloads: newTotal }))
-      }
-      
-      // Navigate to asset URL which triggers the browser download
-      window.location.href = state.selected.url
-    } catch (error) {
-      console.error('Download tracking failed:', error)
-      // Still proceed with download even if analytics fail
-      window.location.href = state.selected.url
-    }
+    // Navigate to asset URL which triggers the browser download
+    window.location.href = state.selected.url
   }
 
   return (
@@ -90,14 +66,7 @@ export default function Download() {
       <p className="mb-8 text-slate-300">
         Choose your operating system below. Latest version{' '}
         <span className="font-semibold text-slate-100">{state.latestVersion || '—'}</span>
-        {state.totalDownloads != null && (
-          <span className="ml-2 inline-flex items-center rounded-full bg-slate-800 px-2 py-0.5 text-xs text-slate-300">
-            Total downloads: {state.totalDownloads.toLocaleString()}
-            {import.meta.env.DEV && (
-              <span className="ml-1 text-green-400" title="Analytics active">●</span>
-            )}
-          </span>
-        )}
+        {/* total downloads removed */}
       </p>
 
       <div className="mb-6 flex gap-3">
@@ -178,28 +147,9 @@ export default function Download() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <a 
-                      className="btn-primary" 
-                      href={a.url} 
-                      onClick={async () => {
-                        try {
-                          // Optimistically increment the UI counter immediately
-                          setState((s) => ({ 
-                            ...s, 
-                            totalDownloads: s.totalDownloads !== null ? s.totalDownloads + 1 : 1 
-                          }))
-                          
-                          // Update analytics in background
-                          const newTotal = await incrementDownloads(1)
-                          if (newTotal !== null) {
-                            // Update with actual server value
-                            setState((s) => ({ ...s, totalDownloads: newTotal }))
-                          }
-                        } catch (error) {
-                          console.error('Download tracking failed:', error)
-                          // Download will still proceed via href
-                        }
-                      }}
+                    <a
+                      className="btn-primary"
+                      href={a.url}
                     >
                       Download
                     </a>
