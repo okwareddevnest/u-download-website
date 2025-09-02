@@ -154,18 +154,16 @@ export class MultiBackendStorage implements StorageBackend {
  */
 export function createStorage(): StorageBackend {
   const backends: StorageBackend[] = []
-  
-  // In production or when API is available, try multiple backends
-  if (!import.meta.env.DEV || location.hostname !== 'localhost') {
-    // Try Blob storage first (if token is available)
-    if (import.meta.env.VITE_HAS_BLOB_TOKEN) {
-      backends.push(new BlobBackend())
-    }
-    // Then regular API backend
-    backends.push(new APIBackend())
+
+  // Prefer Blob when a token is available (works locally and in prod)
+  if (import.meta.env.VITE_HAS_BLOB_TOKEN) {
+    backends.push(new BlobBackend())
   }
-  
-  // Always include localStorage as fallback
+
+  // API backend (Vercel or any backend serving /api/analytics)
+  backends.push(new APIBackend())
+
+  // Always include localStorage as the final fallback
   backends.push(new LocalStorageBackend())
   
   return new MultiBackendStorage(backends)

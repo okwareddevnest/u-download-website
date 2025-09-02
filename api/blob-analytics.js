@@ -10,22 +10,24 @@ import { put, head, BlobNotFoundError } from '@vercel/blob'
  */
 async function getFromBlob(key) {
   try {
-    const blobUrl = `analytics/${key}.json`
-    
-    // Check if blob exists
+    const pathname = `analytics/${key}.json`
+
+    // Check if blob exists and get a download URL
+    let downloadUrl
     try {
-      await head(blobUrl)
+      const meta = await head(pathname)
+      downloadUrl = meta.downloadUrl || meta.url
     } catch (error) {
       if (error instanceof BlobNotFoundError) {
-        return 0 // Return 0 for new counters
+        return 0 // New counter
       }
       throw error
     }
 
-    // Fetch the blob content
-    const response = await fetch(blobUrl)
+    // Fetch the content from the Blob CDN URL
+    const response = await fetch(downloadUrl)
     if (!response.ok) return null
-    
+
     const data = await response.json()
     return typeof data.value === 'number' ? data.value : 0
   } catch (error) {
@@ -44,16 +46,15 @@ async function putToBlob(key, value) {
       updatedAt: new Date().toISOString(),
       key
     }
-    
-    const { url } = await put(
-      `analytics/${key}.json`,
-      JSON.stringify(data),
-      {
-        access: 'private',
-        contentType: 'application/json'
-      }
-    )
-    
+    const pathname = `analytics/${key}.json`
+    const { url } = await put(pathname, JSON.stringify(data), {
+      access: 'public',
+      contentType: 'application/json',
+      // overwrite same key instead of creating versions
+      addRandomSuffix: false,
+      allowOverwrite: true,
+    })
+
     console.log(`Analytics stored to blob: ${url}`)
     return value
   } catch (error) {
@@ -86,11 +87,7 @@ async function incrementInBlob(key, delta = 1) {
 export default async function handler(req, res) {
   // Check if blob token is available
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    res.status(503).json({ 
-      error: 'Blob storage not configured',
-      message: 'BLOB_READ_WRITE_TOKEN not found' 
-    })
-    return
+    return send(res, 503, { error: 'Blob storage not configured', message: 'BLOB_READ_WRITE_TOKEN not found' })
   }
 
   // Set CORS headers
@@ -100,7 +97,8 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end()
+    res.statusCode = 200
+    res.end()
     return
   }
 
@@ -110,26 +108,17 @@ export default async function handler(req, res) {
       const { action, key, delta = 1 } = req.body || {}
       
       if (action !== 'increment' || !key || typeof key !== 'string') {
-        res.status(400).json({ error: 'Invalid request. Expected action=increment with key.' })
-        return
+        return send(res, 400, { error: 'Invalid request. Expected action=increment with key.' })
       }
 
       const numDelta = parseInt(delta, 10) || 1
       const newValue = await incrementInBlob(key, numDelta)
 
       if (newValue === null) {
-        res.status(500).json({ error: 'Failed to increment value in blob storage' })
-        return
+        return send(res, 500, { error: 'Failed to increment value in blob storage' })
       }
 
-      res.status(200).json({ 
-        value: newValue,
-        key,
-        delta: numDelta,
-        backend: 'blob',
-        timestamp: new Date().toISOString()
-      })
-      return
+      return send(res, 200, { value: newValue, key, delta: numDelta, backend: 'blob', timestamp: new Date().toISOString() })
     }
 
     if (req.method === 'GET') {
@@ -139,33 +128,27 @@ export default async function handler(req, res) {
       const key = url.searchParams.get('key')
 
       if (action !== 'get' || !key) {
-        res.status(400).json({ error: 'Invalid request. Expected action=get with key parameter.' })
-        return
+        return send(res, 400, { error: 'Invalid request. Expected action=get with key parameter.' })
       }
 
       const value = await getFromBlob(key)
 
       if (value === null) {
-        res.status(500).json({ error: 'Failed to get value from blob storage' })
-        return
+        return send(res, 500, { error: 'Failed to get value from blob storage' })
       }
 
-      res.status(200).json({ 
-        value,
-        key,
-        backend: 'blob',
-        timestamp: new Date().toISOString()
-      })
-      return
+      return send(res, 200, { value, key, backend: 'blob', timestamp: new Date().toISOString() })
     }
 
-    res.status(405).json({ error: 'Method not allowed' })
+    send(res, 405, { error: 'Method not allowed' })
   } catch (error) {
     console.error('Blob analytics API error:', error)
-    res.status(500).json({ 
-      error: 'Internal server error',
-      backend: 'blob',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
-    })
+    send(res, 500, { error: 'Internal server error', backend: 'blob', message: process.env.NODE_ENV === 'development' ? error.message : undefined })
   }
+}
+
+function send(res, status, obj) {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json')
+  res.end(JSON.stringify(obj))
 }

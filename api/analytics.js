@@ -149,7 +149,8 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end()
+    res.statusCode = 200
+    res.end()
     return
   }
 
@@ -158,26 +159,14 @@ export default async function handler(req, res) {
       // Increment value
       const { key, delta = 1 } = req.body || {}
       
-      if (!key || typeof key !== 'string') {
-        res.status(400).json({ error: 'Missing or invalid key' })
-        return
-      }
+      if (!key || typeof key !== 'string') return send(res, 400, { error: 'Missing or invalid key' })
 
       const numDelta = parseInt(delta, 10) || 1
       const newValue = await incrementValue(key, numDelta)
 
-      if (newValue === null) {
-        res.status(500).json({ error: 'Failed to increment value' })
-        return
-      }
+      if (newValue === null) return send(res, 500, { error: 'Failed to increment value' })
 
-      res.status(200).json({ 
-        value: newValue,
-        key,
-        delta: numDelta,
-        timestamp: new Date().toISOString()
-      })
-      return
+      return send(res, 200, { value: newValue, key, delta: numDelta, timestamp: new Date().toISOString() })
     }
 
     if (req.method === 'GET') {
@@ -185,27 +174,22 @@ export default async function handler(req, res) {
       const url = new URL(req.url || '/', 'http://localhost')
       const key = url.searchParams.get('key')
 
-      if (!key) {
-        res.status(400).json({ error: 'Missing key parameter' })
-        return
-      }
+      if (!key) return send(res, 400, { error: 'Missing key parameter' })
 
       const value = await getValue(key)
 
-      res.status(200).json({ 
-        value: value || 0,
-        key,
-        timestamp: new Date().toISOString()
-      })
-      return
+      return send(res, 200, { value: value || 0, key, timestamp: new Date().toISOString() })
     }
 
-    res.status(405).json({ error: 'Method not allowed' })
+    send(res, 405, { error: 'Method not allowed' })
   } catch (error) {
     console.error('Analytics API error:', error)
-    res.status(500).json({ 
-      error: 'Internal server error',
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
-    })
+    send(res, 500, { error: 'Internal server error', message: process.env.NODE_ENV === 'development' ? error.message : undefined })
   }
+}
+
+function send(res, status, obj) {
+  res.statusCode = status
+  res.setHeader('Content-Type', 'application/json')
+  res.end(JSON.stringify(obj))
 }
