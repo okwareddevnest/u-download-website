@@ -3,7 +3,6 @@ import { detectPlatform } from '../lib/os'
 import { loadReleases, pickBestAsset, formatAssetType, type Asset, type OS } from '../lib/releases'
 import { OSIcon } from '../components/OSIcon'
 import { incrementDownloads, getTotalDownloads } from '../lib/analytics'
-import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -61,8 +60,11 @@ export default function Download() {
 
   const download = async () => {
     if (!state.selected) return
-    // Fire-and-forget analytics update
-    incrementDownloads(1)
+    // Update analytics and get new total
+    const newTotal = await incrementDownloads(1)
+    if (newTotal !== null) {
+      setState((s) => ({ ...s, totalDownloads: newTotal }))
+    }
     // Navigate to asset URL which triggers the browser download
     window.location.href = state.selected.url
   }
@@ -106,41 +108,39 @@ export default function Download() {
       {!state.loading && !state.error && (
         <div>
           {state.selected ? (
-            <CardContainer>
-              <CardBody className="rounded-xl border border-slate-800 p-6 shadow-sm">
-                <CardItem translateZ={40} className="mb-2 text-sm uppercase tracking-wide text-slate-400">
-                  Recommended for {state.platform}
-                </CardItem>
-                <CardItem translateZ={80} className="mb-4 text-xl font-semibold text-slate-100">
-                  {state.selected.filename}
-                </CardItem>
-                <CardItem translateZ={60} className="mb-6 flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                  {state.latestVersion && <span>Version {state.latestVersion}</span>}
-                  {state.latestDate && <span>Released {new Date(state.latestDate).toDateString()}</span>}
-                  <span>Type: {formatAssetType(state.selected)}</span>
-                </CardItem>
-                <CardItem translateZ={80} className="flex flex-wrap items-center gap-3">
-                  <button onClick={download} className="btn-primary" aria-label="Download installer">
-                    Download
-                  </button>
-                  <a
-                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
-                    href={state.selected.url}
-                    download
-                  >
-                    Direct link
-                  </a>
-                </CardItem>
-                {state.latestNotes && (
-                  <details className="mt-6 rounded-lg border border-slate-800 p-4">
-                    <summary className="cursor-pointer select-none text-sm font-bold text-slate-100">Release notes</summary>
-                    <article className="prose prose-invert max-w-none text-slate-300 prose-a:text-indigo-400 prose-code:text-slate-200 mt-3">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.latestNotes}</ReactMarkdown>
-                    </article>
-                  </details>
-                )}
-              </CardBody>
-            </CardContainer>
+            <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 shadow-sm">
+              <div className="mb-2 text-sm uppercase tracking-wide text-slate-400">
+                Recommended for {state.platform}
+              </div>
+              <div className="mb-4 text-xl font-semibold text-slate-100">
+                {state.selected.filename}
+              </div>
+              <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-slate-400">
+                {state.latestVersion && <span>Version {state.latestVersion}</span>}
+                {state.latestDate && <span>Released {new Date(state.latestDate).toDateString()}</span>}
+                <span>Type: {formatAssetType(state.selected)}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button onClick={download} className="btn-primary" aria-label="Download installer">
+                  Download
+                </button>
+                <a
+                  className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                  href={state.selected.url}
+                  download
+                >
+                  Direct link
+                </a>
+              </div>
+              {state.latestNotes && (
+                <details className="mt-6 rounded-lg border border-slate-800 p-4">
+                  <summary className="cursor-pointer select-none text-sm font-bold text-slate-100">Release notes</summary>
+                  <article className="prose prose-invert max-w-none text-slate-300 prose-a:text-indigo-400 prose-code:text-slate-200 mt-3">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{state.latestNotes}</ReactMarkdown>
+                  </article>
+                </details>
+              )}
+            </div>
           ) : (
             <div className="rounded-md border border-amber-800 bg-amber-950/40 p-4 text-amber-200">
               No installer for {state.platform}. Add assets to <code>public/downloads/</code> and update <code>public/data/releases.json</code>.
@@ -151,22 +151,29 @@ export default function Download() {
             <h2 className="mb-4 text-lg font-semibold text-slate-100">All assets</h2>
             <div className="grid gap-3">
               {state.assets.map((a) => (
-                <CardContainer key={a.url}>
-                  <CardBody className="flex items-center justify-between rounded-lg border border-slate-700 p-3 text-sm">
-                    <CardItem translateZ={40} className="flex items-center gap-3">
-                      <OSIcon os={a.os} />
-                      <div>
-                        <div className="font-medium text-slate-100">{a.filename}</div>
-                        <div className="text-slate-400">{formatAssetType(a)}</div>
-                      </div>
-                    </CardItem>
-                    <CardItem translateZ={80} className="flex items-center gap-2">
-                      <a className="btn-primary" href={a.url} onClick={() => incrementDownloads(1)}>
-                        Download
-                      </a>
-                    </CardItem>
-                  </CardBody>
-                </CardContainer>
+                <div key={a.url} className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-900/30 p-3 text-sm">
+                  <div className="flex items-center gap-3">
+                    <OSIcon os={a.os} />
+                    <div>
+                      <div className="font-medium text-slate-100">{a.filename}</div>
+                      <div className="text-slate-400">{formatAssetType(a)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a 
+                      className="btn-primary" 
+                      href={a.url} 
+                      onClick={async () => {
+                        const newTotal = await incrementDownloads(1)
+                        if (newTotal !== null) {
+                          setState((s) => ({ ...s, totalDownloads: newTotal }))
+                        }
+                      }}
+                    >
+                      Download
+                    </a>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
