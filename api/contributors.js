@@ -1,8 +1,14 @@
+// Fallback when neither GITHUB_REPO nor VITE_GITHUB_REPO is set in the
+// deployment environment. Keep in sync with public/data/config.json —
+// the client prefers this API, so an unset env var would otherwise 400
+// and the site would show no releases at all.
+const DEFAULT_REPO = 'DecodeDedan/U-Download'
+
 export default async function handler(req, res) {
   try {
     const url = new URL(req.url || '/', 'http://localhost')
     const includeBots = url.searchParams.get('includeBots') === '1' || url.searchParams.get('includeBots') === 'true'
-    const repoEnv = process.env.GITHUB_REPO || process.env.VITE_GITHUB_REPO
+    const repoEnv = process.env.GITHUB_REPO || process.env.VITE_GITHUB_REPO || DEFAULT_REPO
     const token = process.env.GITHUB_TOKEN
     const repo = normalizeRepo(repoEnv)
     if (!repo) {
