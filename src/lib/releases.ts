@@ -199,20 +199,75 @@ export async function loadReleases(): Promise<ReleasesFile> {
   }
 }
 
+/**
+ * What we install when architecture detection was inconclusive.
+ *
+ * macOS defaults to arm64: Apple stopped selling Intel Macs in 2023, so an
+ * unidentified Mac is far more likely to be Apple Silicon — and the failure is
+ * asymmetric. An arm64 Mac handed the Intel build runs the whole app under
+ * Rosetta with no warning; an Intel Mac handed the arm64 build fails loudly and
+ * immediately, so the user knows to switch.
+ *
+ * Windows and Linux default to x64, which is still the overwhelming majority of
+ * desktop installs on both.
+ */
+export function defaultArchFor(os: OS): Arch {
+  return os === 'mac' ? 'arm64' : 'x64'
+}
+
+/**
+ * Turns a possibly-unknown architecture into a concrete one, and reports
+ * whether that was a real detection or a fallback, so the UI can say so.
+ */
+export function resolveArch(os: OS, arch: Arch | undefined): { arch: Arch; assumed: boolean } {
+  if (arch) return { arch, assumed: false }
+  return { arch: defaultArchFor(os), assumed: true }
+}
+
+/** Human-facing architecture name. Never show raw asset-filename arch tokens. */
+export function formatArchLabel(os: OS, arch: Arch | undefined): string {
+  if (!arch || arch === 'universal') return 'Universal'
+  if (os === 'mac') return arch === 'arm64' ? 'Apple Silicon' : 'Intel'
+  return arch === 'arm64' ? 'ARM64' : '64-bit'
+}
+
+/** The distinct architectures we actually ship for a given OS, in display order. */
+export function availableArchs(assets: Asset[], os: OS): Arch[] {
+  const order: Arch[] = ['x64', 'arm64', 'universal']
+  const present = new Set(assets.filter((a) => a.os === os).map((a) => a.arch).filter(Boolean) as Arch[])
+  return order.filter((a) => present.has(a))
+}
+
+/**
+ * `arch === undefined` means "we could not detect it" and is resolved through
+ * `defaultArchFor(os)` — it is deliberately NOT the same as a detected x64.
+ */
 export function pickBestAsset(assets: Asset[], os: OS, arch: Arch | undefined): Asset | undefined {
   const candidates = assets.filter((a) => a.os === os)
   if (!candidates.length) return undefined
-  // Prefer universal over exact arch
-  const archPref = arch === 'arm64' ? ['arm64', 'universal', 'x64'] : ['x64', 'universal', 'arm64']
+
+  const effective = resolveArch(os, arch).arch
+  const archPref: Arch[] =
+    effective === 'arm64' ? ['arm64', 'universal', 'x64'] : effective === 'x64' ? ['x64', 'universal', 'arm64'] : ['universal', 'x64', 'arm64']
   const kindPref: Asset['kind'][] =
     os === 'windows'
       ? ['exe', 'msi']
       : os === 'mac'
         ? ['dmg', 'pkg']
         : ['deb', 'rpm', 'appimage', 'tar', 'other']
-  return candidates
-    .sort((a, b) => archPref.indexOf(a.arch || 'universal') - archPref.indexOf(b.arch || 'universal'))
-    .sort((a, b) => kindPref.indexOf(a.kind || 'other') - kindPref.indexOf(b.kind || 'other'))[0]
+
+  const rank = (list: readonly unknown[], value: unknown) => {
+    const i = list.indexOf(value)
+    return i === -1 ? list.length : i
+  }
+
+  // Architecture is the primary key: a wrong-arch build of the preferred
+  // package format is worse than the right-arch build of another format.
+  return [...candidates].sort((a, b) => {
+    const byArch = rank(archPref, a.arch || 'universal') - rank(archPref, b.arch || 'universal')
+    if (byArch !== 0) return byArch
+    return rank(kindPref, a.kind || 'other') - rank(kindPref, b.kind || 'other')
+  })[0]
 }
 
 export async function computeSha256(url: string): Promise<string> {

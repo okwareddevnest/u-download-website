@@ -1,6 +1,16 @@
 import React from 'react'
-import { detectPlatform } from '../lib/os'
-import { loadReleases, pickBestAsset, formatAssetType, type Asset, type OS } from '../lib/releases'
+import { detectPlatform, detectPlatformDetailed } from '../lib/os'
+import {
+  loadReleases,
+  pickBestAsset,
+  formatAssetType,
+  formatArchLabel,
+  availableArchs,
+  resolveArch,
+  type Arch,
+  type Asset,
+  type OS,
+} from '../lib/releases'
 import { OSIcon } from '../components/OSIcon'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -13,33 +23,37 @@ type State = {
   latestDate?: string
   latestNotes?: string
   platform: OS
-  selected?: Asset
+  /** Detected architecture. `undefined` means detection was inconclusive. */
+  arch?: Arch
+  /** True once the visitor has picked an architecture themselves. */
+  archChosen: boolean
 }
 
 export default function Download() {
   const initialPlatform = React.useMemo(() => detectPlatform().platform, [])
-    const [state, setState] = React.useState<State>({
-      loading: true,
-      assets: [],
-      platform: initialPlatform,
-    })
+  const [state, setState] = React.useState<State>({
+    loading: true,
+    assets: [],
+    platform: initialPlatform,
+    archChosen: false,
+  })
 
   React.useEffect(() => {
     ;(async () => {
       try {
-        const rel = await loadReleases()
+        // Architecture detection is layered and partly async (client hints),
+        // so it is resolved here rather than during the first render.
+        const [rel, detected] = await Promise.all([loadReleases(), detectPlatformDetailed()])
         const latest = rel.releases.find((r) => r.version === rel.latest) || rel.releases[0]
-        const assets = latest?.assets || []
-        const { arch } = detectPlatform()
-        const recommended = pickBestAsset(assets, state.platform, arch)
         setState((s) => ({
           ...s,
           loading: false,
           latestVersion: latest?.version,
           latestDate: latest?.date,
           latestNotes: latest?.notes,
-          assets,
-          selected: recommended,
+          assets: latest?.assets || [],
+          platform: s.archChosen ? s.platform : detected.platform,
+          arch: s.archChosen ? s.arch : detected.arch,
         }))
       } catch (e: any) {
         setState((s) => ({ ...s, loading: false, error: e?.message || 'Failed to load releases' }))
@@ -47,17 +61,22 @@ export default function Download() {
     })()
   }, [])
 
-  const selectOS = (os: OS) => {
-    const { arch } = detectPlatform()
-    const sel = pickBestAsset(state.assets, os, arch)
-    setState((s) => ({ ...s, platform: os, selected: sel }))
-  }
+  const { arch: effectiveArch, assumed } = resolveArch(state.platform, state.arch)
+  const archOptions = availableArchs(state.assets, state.platform)
+  const selected = React.useMemo(
+    () => pickBestAsset(state.assets, state.platform, state.arch),
+    [state.assets, state.platform, state.arch],
+  )
+  const otherArch = archOptions.find((a) => a !== effectiveArch)
+
+  const selectOS = (os: OS) => setState((s) => ({ ...s, platform: os }))
+  const selectArch = (arch: Arch) => setState((s) => ({ ...s, arch, archChosen: true }))
 
   const download = async () => {
-    if (!state.selected) return
-    
+    if (!selected) return
+
     // Navigate to asset URL which triggers the browser download
-    window.location.href = state.selected.url
+    window.location.href = selected.url
   }
 
   return (
@@ -69,7 +88,7 @@ export default function Download() {
         {/* total downloads removed */}
       </p>
 
-      <div className="mb-6 flex gap-3">
+      <div className="mb-4 flex gap-3">
         {(['windows', 'mac', 'linux'] as OS[]).map((os) => (
           <button
             key={os}
@@ -85,6 +104,26 @@ export default function Download() {
         ))}
       </div>
 
+      {archOptions.length > 1 && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-slate-400">Processor</span>
+          {archOptions.map((a) => (
+            <button
+              key={a}
+              onClick={() => selectArch(a)}
+              aria-pressed={effectiveArch === a}
+              className={`rounded-lg border px-3 py-1.5 text-sm ${
+                effectiveArch === a
+                  ? 'border-indigo-600 bg-indigo-600/10 text-indigo-300'
+                  : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              {formatArchLabel(state.platform, a)}
+            </button>
+          ))}
+        </div>
+      )}
+
       {state.loading && <div className="text-slate-300">Loading…</div>}
       {state.error && (
         <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
@@ -94,18 +133,17 @@ export default function Download() {
 
       {!state.loading && !state.error && (
         <div>
-          {state.selected ? (
+          {selected ? (
             <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 shadow-sm">
               <div className="mb-2 text-sm uppercase tracking-wide text-slate-400">
                 Recommended for {state.platform}
+                {selected.arch && <> · {formatArchLabel(state.platform, selected.arch)}</>}
               </div>
-              <div className="mb-4 text-xl font-semibold text-slate-100">
-                {state.selected.filename}
-              </div>
+              <div className="mb-4 text-xl font-semibold text-slate-100">{selected.filename}</div>
               <div className="mb-6 flex flex-wrap items-center gap-4 text-sm text-slate-400">
                 {state.latestVersion && <span>Version {state.latestVersion}</span>}
                 {state.latestDate && <span>Released {new Date(state.latestDate).toDateString()}</span>}
-                <span>Type: {formatAssetType(state.selected)}</span>
+                <span>Type: {formatAssetType(selected)}</span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <button onClick={download} className="btn-primary" aria-label="Download installer">
@@ -113,12 +151,33 @@ export default function Download() {
                 </button>
                 <a
                   className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
-                  href={state.selected.url}
+                  href={selected.url}
                   download
                 >
                   Direct link
                 </a>
+                {otherArch && (
+                  <button
+                    onClick={() => selectArch(otherArch)}
+                    className="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                  >
+                    {formatArchLabel(state.platform, otherArch)} build
+                  </button>
+                )}
               </div>
+              {assumed && otherArch && (
+                <p className="mt-4 text-sm text-slate-500">
+                  We couldn’t confirm your processor, so we’re showing the{' '}
+                  {formatArchLabel(state.platform, effectiveArch)} build. If that’s wrong, pick{' '}
+                  <button
+                    onClick={() => selectArch(otherArch)}
+                    className="text-indigo-400 underline underline-offset-2 hover:text-indigo-300"
+                  >
+                    {formatArchLabel(state.platform, otherArch)}
+                  </button>{' '}
+                  instead.
+                </p>
+              )}
               {state.latestNotes && (
                 <details className="mt-6 rounded-lg border border-slate-800 p-4">
                   <summary className="cursor-pointer select-none text-sm font-bold text-slate-100">Release notes</summary>
@@ -143,7 +202,10 @@ export default function Download() {
                     <OSIcon os={a.os} />
                     <div>
                       <div className="font-medium text-slate-100">{a.filename}</div>
-                      <div className="text-slate-400">{formatAssetType(a)}</div>
+                      <div className="text-slate-400">
+                        {formatAssetType(a)}
+                        {a.arch && <> · {formatArchLabel(a.os, a.arch)}</>}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
