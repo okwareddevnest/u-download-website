@@ -8,7 +8,12 @@ export default async function handler(req, res) {
   try {
     const url = new URL(req.url || '/', 'http://localhost')
     const includeBots = url.searchParams.get('includeBots') === '1' || url.searchParams.get('includeBots') === 'true'
-    const repoEnv = process.env.GITHUB_REPO || process.env.VITE_GITHUB_REPO || DEFAULT_REPO
+    const repoEnv = process.env.GITHUB_REPO_OVERRIDE || DEFAULT_REPO
+    // Precedence deliberately favours the in-repo value. A stale GITHUB_REPO
+    // left in the Vercel dashboard silently kept pointing this site at the
+    // previous account after the app repo moved, and nothing in the codebase
+    // could reveal it. GITHUB_REPO_OVERRIDE remains as an explicit escape
+    // hatch; the ambient GITHUB_REPO no longer wins by accident.
     const token = process.env.GITHUB_TOKEN
     const repo = normalizeRepo(repoEnv)
     if (!repo) {
