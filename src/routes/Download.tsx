@@ -12,6 +12,7 @@ import {
   type OS,
 } from '../lib/releases'
 import { OSIcon } from '../components/OSIcon'
+import { DownloadCount } from '../components/DownloadCount'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -85,7 +86,13 @@ export default function Download() {
       <p className="mb-8 text-slate-300">
         Choose your operating system below. Latest version{' '}
         <span className="font-semibold text-slate-100">{state.latestVersion || '—'}</span>
-        {/* total downloads removed */}
+        {/* Sits in the running sentence directly above the OS picker and the
+            Download button — the moment the figure is actually persuasive. */}
+        <DownloadCount
+          label="downloads to date"
+          numberClassName="font-semibold text-slate-100"
+          prefix={<span className="text-slate-500"> · </span>}
+        />
       </p>
 
       <div className="mb-4 flex gap-3">

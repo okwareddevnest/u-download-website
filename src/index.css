@@ -91,3 +91,20 @@ body {
   transform: translateY(-2px) scale(1.01);
   border-color: rgb(79 70 229 / 0.6); /* indigo-600 */
 }
+
+/* Live download counter: a brief wash behind the digits when the figure moves.
+   Updates are usually +1, which is a single digit flipping and easy to miss —
+   the highlight is what makes the change register as live. Background-color is
+   animated rather than text colour so it composes with any surrounding ink. */
+@keyframes count-tick {
+  0%   { background-color: rgb(99 102 241 / 0.35); }
+  100% { background-color: rgb(99 102 241 / 0); }
+}
+
+.count-tick {
+  animation: count-tick 1200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .count-tick { animation: none; }
+}

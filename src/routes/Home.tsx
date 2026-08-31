@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import React from 'react'
 import { loadReleases } from '../lib/releases'
 import MarqueeBackground from '../components/MarqueeBackground'
+import { DownloadCount } from '../components/DownloadCount'
 import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card'
 
 export default function Home() {
@@ -98,6 +99,10 @@ function LatestBadge() {
     <div className="mb-4 inline-flex items-center gap-3 rounded-full bg-white/10 px-3 py-1 text-xs backdrop-blur">
       <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-[10px]">●</span>
       <span className="opacity-90">{version ? `Latest v${version}` : 'Latest'}</span>
+      {/* The total joins the pill that already sits above the primary CTA rather
+          than becoming a card of its own — it reads as one more fact about the
+          current build, in the composition that is already there. */}
+      <DownloadCount className="border-l border-white/20 pl-3 opacity-90" numberClassName="font-semibold" />
     </div>
   )
 }
