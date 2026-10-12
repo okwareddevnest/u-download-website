@@ -13,6 +13,8 @@ import {
 } from '../lib/releases'
 import { OSIcon } from '../components/OSIcon'
 import { DownloadCount } from '../components/DownloadCount'
+import { AndroidDownload } from '../components/AndroidDownload'
+import { isAndroidDevice } from '../lib/android'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -32,6 +34,9 @@ type State = {
 
 export default function Download() {
   const initialPlatform = React.useMemo(() => detectPlatform().platform, [])
+  // A phone's browser reports Linux; without this an Android visitor is
+  // offered the Linux desktop installer.
+  const onPhone = React.useMemo(isAndroidDevice, [])
   const [state, setState] = React.useState<State>({
     loading: true,
     assets: [],
@@ -83,6 +88,13 @@ export default function Download() {
   return (
     <div className="container-app py-12">
       <h1 className="mb-2 text-3xl font-bold text-slate-100">Download U-Download</h1>
+      {onPhone && (
+        <div className="mb-12">
+          <AndroidDownload />
+        </div>
+      )}
+
+      {onPhone && <h2 className="mb-2 text-2xl font-bold text-slate-100">For your computer</h2>}
       <p className="mb-8 text-slate-300">
         Choose your operating system below. Latest version{' '}
         <span className="font-semibold text-slate-100">{state.latestVersion || '—'}</span>
@@ -227,6 +239,12 @@ export default function Download() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {!onPhone && (
+        <div className="mt-12">
+          <AndroidDownload />
         </div>
       )}
     </div>

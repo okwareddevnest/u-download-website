@@ -4,6 +4,7 @@ import { loadReleases } from '../lib/releases'
 import MarqueeBackground from '../components/MarqueeBackground'
 import { DownloadCount } from '../components/DownloadCount'
 import { CardContainer, CardBody, CardItem } from '@/components/ui/3d-card'
+import { isAndroidDevice } from '../lib/android'
 
 export default function Home() {
   return (
@@ -16,11 +17,12 @@ export default function Home() {
               <LatestBadge />
               <h1 className="mb-3 text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">U-Download</h1>
               <p className="mb-4 sm:mb-6 text-base sm:text-lg text-white/90">
-                Fast & Beautiful YouTube Downloader for Windows, macOS, and Linux. Paste a link, trim the exact segment you need, pick the best quality, and save.
+                Fast & Beautiful YouTube Downloader for Windows, macOS, Linux and Android. Paste a link — or tap Share in
+                YouTube on your phone — trim the exact segment you need, pick the best quality, and save.
               </p>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                 <NavLink to="/download" className="btn-primary w-full sm:w-auto text-center">
-                  Download U-Download
+                  {isAndroidDevice() ? 'Get the Android app' : 'Download U-Download'}
                 </NavLink>
                 <a href="#features" className="rounded-lg bg-white/10 px-4 py-2 font-medium text-white shadow-sm ring-1 ring-white/20 backdrop-blur hover:bg-white/20 w-full sm:w-auto text-center">
                   Learn more

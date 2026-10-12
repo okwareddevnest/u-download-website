@@ -39,7 +39,10 @@ export default function App() {
           <div className="container-app py-8">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
               <div className="text-sm text-slate-400 font-medium">
-                © <span>{new Date().getFullYear()}</span> U-Download
+                © <span>{new Date().getFullYear()}</span> U-Download · Developed by{' '}
+                <a href="https://okwaretech.com" className="text-slate-300 underline-offset-2 hover:text-slate-100 hover:underline">
+                  OkwareTech
+                </a>
               </div>
               <div className="flex gap-6 text-sm">
                 <NavLink 
